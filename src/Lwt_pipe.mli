@@ -30,19 +30,9 @@
     {b status: experimental}
 *)
 
-type 'a or_error = ('a, string) Result.result
-
 type 'a step =
-  | Yield of 'a or_error
+  | Yield of 'a
   | End
-
-module LwtRes : sig
-  type 'a t = 'a or_error Lwt.t
-  val (>>=) : 'a t -> ('a -> 'b t) -> 'b t
-  val (>|=) : 'a t -> ('a -> 'b) -> 'b t
-  val return : 'a -> 'a t
-  val fail : string -> 'a t
-end
 
 exception Closed
 
@@ -62,8 +52,8 @@ val close : (_,_) t -> unit Lwt.t
 (** [close p] closes [p], which will not accept input anymore.
     This sends [End] to all readers connected to [p] *)
 
-val close_async : (_,_) t -> unit
-(** Same as {!close} but closes in the background *)
+val close_nonblock : _ t -> unit
+(** Same as {!close} but does not wait for completion of dependent tasks *)
 
 val wait : (_,_) t -> unit Lwt.t
 (** Evaluates once the pipe closes *)
@@ -88,13 +78,10 @@ val read : ('a, [>`r]) t -> 'a step Lwt.t
 (** Read the next value from a Pipe *)
 
 val write : ('a, [>`w]) t -> 'a -> unit Lwt.t
-(** @raise Pipe.Closed if the writer is closed *)
+(** @raise Closed if the writer is closed *)
 
 val write_list : ('a, [>`w]) t -> 'a list -> unit Lwt.t
-(** @raise Pipe.Closed if the writer is closed *)
-
-val write_error : (_, [>`w]) t -> string -> unit Lwt.t
-(** @raise Pipe.Closed if the writer is closed *)
+(** @raise Closed if the writer is closed *)
 
 (** {2 Write-only Interface and Combinators} *)
 
@@ -127,15 +114,15 @@ module Reader : sig
 
   val filter_map : f:('a -> 'b option) -> ('a, [>`r]) pipe -> 'b t
 
-  val fold : f:('acc -> 'a -> 'acc) -> x:'acc -> ('a, [>`r]) pipe -> 'acc LwtRes.t
+  val fold : f:('acc -> 'a -> 'acc) -> x:'acc -> ('a, [>`r]) pipe -> 'acc Lwt.t
 
-  val fold_s : f:('acc -> 'a -> 'acc Lwt.t) -> x:'acc -> ('a, [>`r]) pipe -> 'acc LwtRes.t
+  val fold_s : f:('acc -> 'a -> 'acc Lwt.t) -> x:'acc -> ('a, [>`r]) pipe -> 'acc Lwt.t
 
-  val iter : f:('a -> unit) -> 'a t -> unit LwtRes.t
+  val iter : f:('a -> unit) -> 'a t -> unit Lwt.t
 
-  val iter_s : f:('a -> unit Lwt.t) -> 'a t -> unit LwtRes.t
+  val iter_s : f:('a -> unit Lwt.t) -> 'a t -> unit Lwt.t
 
-  val iter_p : f:('a -> unit Lwt.t) -> 'a t -> unit LwtRes.t
+  val iter_p : f:('a -> unit Lwt.t) -> 'a t -> unit Lwt.t
 
   val merge_both : 'a t -> 'a t -> 'a t
   (** Merge the two input streams in a non-specified order *)
@@ -161,21 +148,17 @@ val of_string : string -> char Reader.t
 
 val of_lwt_klist : 'a lwt_klist -> 'a Reader.t
 
-val to_list_rev : ('a,[>`r]) t -> 'a list LwtRes.t
+val to_list_rev : ('a,[>`r]) t -> 'a list Lwt.t
 
-val to_list : ('a,[>`r]) t -> 'a list LwtRes.t
+val to_list : ('a,[>`r]) t -> 'a list Lwt.t
 
-val to_list_exn : ('a,[>`r]) t -> 'a list Lwt.t
-(** Same as {!to_list}, but can fail with
-    @raise Failure if some error is met *)
+val to_buffer : Buffer.t -> (char ,[>`r]) t -> unit Lwt.t
 
-val to_buffer : Buffer.t -> (char ,[>`r]) t -> unit LwtRes.t
+val to_buffer_str : ?sep:string -> Buffer.t -> (string, [>`r]) t -> unit Lwt.t
 
-val to_buffer_str : ?sep:string -> Buffer.t -> (string, [>`r]) t -> unit LwtRes.t
+val to_string : (char, [>`r]) t -> string Lwt.t
 
-val to_string : (char, [>`r]) t -> string LwtRes.t
-
-val join_strings  : ?sep:string -> (string, [>`r]) t -> string LwtRes.t
+val join_strings  : ?sep:string -> (string, [>`r]) t -> string Lwt.t
 
 val to_lwt_klist : 'a Reader.t -> 'a lwt_klist
 (** Iterates on the reader. Errors are ignored (but stop the list). *)

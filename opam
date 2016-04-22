@@ -16,7 +16,6 @@ build-doc: [ make "doc" ]
 depends: [
   "ocamlfind" {build}
   "ocamlbuild" {build}
-  "result"
   "lwt"
 ]
 tags: [ "lwt" "pipe" "stream" "blocking" ]

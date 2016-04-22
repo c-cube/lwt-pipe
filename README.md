@@ -25,7 +25,7 @@ or:
 # Lwt_pipe.of_list l
   |> Lwt_pipe.Reader.map ~f:(fun x->x+1)
   |> Lwt_pipe.to_list;;
-- : int list Lwt_pipe.or_error = Result.Ok [2; 3; 4; 5]
+- : int list Lwt.t = [2; 3; 4; 5]
 
 ```
 
