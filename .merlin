@@ -1,0 +1,5 @@
+S src
+B _build/src
+PKG lwt
+PKG result
+FLG -w +a-4
