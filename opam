@@ -1,5 +1,5 @@
 opam-version: "1.2"
-name: "lwt_pipe"
+name: "lwt-pipe"
 version: "dev"
 author: "Simon Cruanes"
 maintainer: "simon.cruanes.2007@m4x.org"
@@ -10,7 +10,7 @@ install: [
   [make "install"]
 ]
 remove: [
-  ["ocamlfind" "remove" "lwt_pipe"]
+  ["ocamlfind" "remove" "lwt-pipe"]
 ]
 build-doc: [ make "doc" ]
 depends: [
@@ -20,7 +20,7 @@ depends: [
   "lwt"
 ]
 tags: [ "lwt" "pipe" "stream" "blocking" ]
-homepage: "https://github.com/c-cube/lwt_pipe/"
-dev-repo: "https://github.com/c-cube/lwt_pipe.git"
-bug-reports: "https://github.com/c-cube/lwt_pipe/issues/"
+homepage: "https://github.com/c-cube/lwt-pipe/"
+dev-repo: "https://github.com/c-cube/lwt-pipe.git"
+bug-reports: "https://github.com/c-cube/lwt-pipe/issues/"
 

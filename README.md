@@ -5,18 +5,18 @@ and a bounded internal buffer.
 
 ## Build
 
-    opam install lwt_pipe
+    opam install lwt-pipe
 
 or:
 
-    opam pin add -k git lwt-pipe https://github.com/c-cube/lwt_pipe.git
-    opam install lwt_pipe
+    opam pin add -k git lwt-pipe https://github.com/c-cube/lwt-pipe.git
+    opam install lwt-pipe
 
 ## Use
 
 ```ocaml
 # #require "lwt";;
-# #require "lwt_pipe";;
+# #require "lwt-pipe";;
 
 # open Lwt.Infix;;
 

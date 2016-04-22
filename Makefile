@@ -9,5 +9,5 @@ clean:
 	ocamlbuild -clean
 
 install: build
-	ocamlfind install lwt_pipe src/META \
+	ocamlfind install lwt-pipe src/META \
 	  $(addprefix _build/src/, $(TARGETS)) _build/src/*.cmi
