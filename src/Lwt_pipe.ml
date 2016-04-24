@@ -3,21 +3,17 @@
 
 open Lwt.Infix
 
-type 'a step =
-  | Yield of 'a
-  | End
-
-let ret_end = Lwt.return End
-let ret_yield x = Lwt.return (Yield x)
+let ret_end = Lwt.return None
+let ret_yield x = Lwt.return (Some x)
 
 exception Closed
 
 type ('a, +'perm) t = {
   close : unit Lwt.u;
   closed : unit Lwt.t;
-  readers : 'a step Lwt.u Queue.t;  (* readers *)
-  writers : 'a step Queue.t;
-  blocked_writers : ('a step * unit Lwt.u) Queue.t; (* blocked writers *)
+  readers : 'a option Lwt.u Queue.t;  (* readers *)
+  writers : 'a option Queue.t;
+  blocked_writers : ('a option * unit Lwt.u) Queue.t; (* blocked writers *)
   max_size : int;
   mutable keep : unit Lwt.t list;  (* do not GC, and wait for completion *)
 } constraint 'perm = [< `r | `w]
@@ -47,7 +43,7 @@ let is_closed p = not (Lwt.is_sleeping p.closed)
 let close_nonblock p =
   if not (is_closed p) then (
     Lwt.wakeup p.close (); (* evaluate *)
-    Queue.iter (fun r -> Lwt.wakeup r End) p.readers;
+    Queue.iter (fun r -> Lwt.wakeup r None) p.readers;
     Queue.iter (fun (_,r) -> Lwt.wakeup r ()) p.blocked_writers;
   )
 
@@ -112,8 +108,8 @@ let write_step t x =
 
 let rec connect_rec r w =
   read r >>= function
-  | End -> Lwt.return_unit
-  | Yield _ as step ->
+  | None -> Lwt.return_unit
+  | Some _ as step ->
     write_step w step >>= fun () ->
     connect_rec r w
 
@@ -140,7 +136,7 @@ let link_close_l p ~after =
          if !n = 0 then close_nonblock p))
     after
 
-let write t x = write_step t (Yield x)
+let write t x = write_step t (Some x)
 
 let rec write_list t l = match l with
   | [] -> Lwt.return_unit
@@ -156,8 +152,8 @@ module Writer = struct
       let fut = read b in
       Lwt.on_failure fut (fun _ -> close_nonblock a);
       fut >>= function
-      | Yield x -> write a (f x) >>= fwd
-      | End -> Lwt.return_unit
+      | Some x -> write a (f x) >>= fwd
+      | None -> Lwt.return_unit
     in
     keep b (fwd());
     (* when a gets closed, close b too *)
@@ -169,8 +165,8 @@ module Writer = struct
     let res = create () in
     let rec fwd () =
       read res >>= function
-      | End -> Lwt.return_unit
-      | Yield x -> Lwt_list.iter_p (fun p -> write p x) l >>= fwd
+      | None -> Lwt.return_unit
+      | Some x -> Lwt_list.iter_p (fun p -> write p x) l >>= fwd
     in
     (* do not GC before res dies; close res when any outputx is closed *)
     keep res (fwd ());
@@ -189,8 +185,8 @@ module Reader = struct
       let fut = read a in
       Lwt.on_failure fut (fun _ -> close_nonblock b);
       fut >>= function
-      | Yield x -> write b (f x) >>= fwd
-      | End -> close b
+      | Some x -> write b (f x) >>= fwd
+      | None -> close b
     in
     keep b (fwd());
     b
@@ -201,8 +197,8 @@ module Reader = struct
       let fut = read a in
       Lwt.on_failure fut (fun _ -> close_nonblock b);
       fut >>= function
-      | Yield x -> f x >>= fun y -> write b y >>= fwd
-      | End -> close b
+      | Some x -> f x >>= fun y -> write b y >>= fwd
+      | None -> close b
     in
     keep b (fwd());
     b
@@ -213,8 +209,8 @@ module Reader = struct
       let fut = read a in
       Lwt.on_failure fut (fun _ -> close_nonblock b);
       fut >>= function
-      | Yield x -> if f x then write b x >>= fwd else fwd()
-      | End -> close b
+      | Some x -> if f x then write b x >>= fwd else fwd()
+      | None -> close b
     in
     keep b (fwd());
     b
@@ -225,12 +221,12 @@ module Reader = struct
       let fut = read a in
       Lwt.on_failure fut (fun _ -> close_nonblock b);
       fut >>= function
-      | Yield x ->
+      | Some x ->
         begin match f x with
           | None -> fwd()
           | Some y -> write b y >>= fwd
         end
-      | End -> close b
+      | None -> close b
     in
     keep b (fwd());
     b
@@ -238,30 +234,30 @@ module Reader = struct
   let rec fold ~f ~x t =
     read t
     >>= function
-    | End -> Lwt.return x
-    | Yield y -> fold ~f ~x:(f x y) t
+    | None -> Lwt.return x
+    | Some y -> fold ~f ~x:(f x y) t
 
   let rec fold_s ~f ~x t =
     read t >>= function
-    | End -> Lwt.return x
-    | Yield y ->
+    | None -> Lwt.return x
+    | Some y ->
       f x y >>= fun x -> fold_s ~f ~x t
 
   let rec iter ~f t =
     read t >>= function
-    | End -> Lwt.return_unit
-    | Yield x -> f x; iter ~f t
+    | None -> Lwt.return_unit
+    | Some x -> f x; iter ~f t
 
   let rec iter_s ~f t =
     read t >>= function
-    | End -> Lwt.return_unit
-    | Yield x -> f x >>= fun () -> iter_s ~f t
+    | None -> Lwt.return_unit
+    | Some x -> f x >>= fun () -> iter_s ~f t
 
   let iter_p ~f t =
     let rec iter acc =
       read t >>= function
-      | End -> Lwt.join acc
-      | Yield x -> iter (f x :: acc)
+      | None -> Lwt.join acc
+      | Some x -> iter (f x :: acc)
     in iter []
 
   let merge_all l =
@@ -355,8 +351,8 @@ let join_strings ?sep r =
 let to_lwt_klist r =
   let rec next () =
     read r >>= function
-    | End -> Lwt.return `Nil
-    | Yield x -> Lwt.return (`Cons (x, next ()))
+    | None -> Lwt.return `Nil
+    | Some x -> Lwt.return (`Cons (x, next ()))
   in
   next ()
 

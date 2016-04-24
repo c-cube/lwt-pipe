@@ -30,10 +30,6 @@
     {b status: experimental}
 *)
 
-type 'a step =
-  | Yield of 'a
-  | End
-
 exception Closed
 
 type ('a, +'perm) t constraint 'perm = [< `r | `w]
@@ -74,7 +70,7 @@ val link_close : (_,_) t -> after:(_,_) t -> unit
 (** [link_close p ~after] will close [p] when [after] closes.
     if [after] is closed already, closes [p] immediately *)
 
-val read : ('a, [>`r]) t -> 'a step Lwt.t
+val read : ('a, [>`r]) t -> 'a option Lwt.t
 (** Read the next value from a Pipe *)
 
 val write : ('a, [>`w]) t -> 'a -> unit Lwt.t
