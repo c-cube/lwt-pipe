@@ -79,6 +79,14 @@ val write : ('a, [>`w]) t -> 'a -> unit Lwt.t
 val write_list : ('a, [>`w]) t -> 'a list -> unit Lwt.t
 (** @raise Closed if the writer is closed *)
 
+val to_stream : ('a, [>`r]) t -> 'a Lwt_stream.t
+(** [to_stream p] returns a stream with the content from [p].  The
+    stream will close when [p] closes. *)
+
+val of_stream : 'a Lwt_stream.t -> ('a, [>`r]) t
+(** [of_stream s] reads from [s].  The returned pipe will close when
+    [s] closes. *)
+
 (** {2 Write-only Interface and Combinators} *)
 
 module Writer : sig

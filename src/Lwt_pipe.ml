@@ -143,6 +143,14 @@ let rec write_list t l = match l with
   | x :: tail ->
     write t x >>= fun () -> write_list t tail
 
+let to_stream p =
+  Lwt_stream.from (fun () -> read p)
+
+let of_stream s =
+  let p = create () in
+  Lwt.async (fun () -> Lwt_stream.iter_s (write p) s >>= fun () -> close p);
+  p
+
 module Writer = struct
   type 'a t = ('a, [`w]) pipe
 
