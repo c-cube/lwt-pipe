@@ -231,6 +231,50 @@ module Reader = struct
     keep b (fwd());
     b
 
+  let filter_map_s ~f a =
+    let b = create () in
+    let rec fwd () =
+      let fut = read a in
+      Lwt.on_failure fut (fun _ -> close_nonblock b);
+      fut >>= function
+      | Some x ->
+        f x >>= (function
+          | None -> fwd()
+          | Some y -> write b y >>= fwd
+        )
+      | None -> close b
+    in
+    keep b (fwd());
+    b
+
+  let flat_map ~f a =
+    let b = create () in
+    let rec fwd () =
+      let fut = read a in
+      Lwt.on_failure fut (fun _ -> close_nonblock b);
+      fut >>= function
+      | Some x ->
+        let l = f x in
+        write_list b l >>= fwd
+      | None -> close b
+    in
+    keep b (fwd());
+    b
+
+  let flat_map_s ~f a =
+    let b = create () in
+    let rec fwd () =
+      let fut = read a in
+      Lwt.on_failure fut (fun _ -> close_nonblock b);
+      fut >>= function
+      | Some x ->
+        f x >>= fun l ->
+        write_list b l >>= fwd
+      | None -> close b
+    in
+    keep b (fwd());
+    b
+
   let rec fold ~f ~x t =
     read t
     >>= function
