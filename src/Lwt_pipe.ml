@@ -76,8 +76,9 @@ let try_read t =
   )
 
 (* read next one *)
-let read t = match try_read t with
-   | None when is_closed t -> ret_end (* end of stream *)
+let read t =
+  if is_closed t then ret_end  (* end of stream *)
+  else match try_read t with
    | None ->
      let fut, send = Lwt.wait () in
      Queue.push send t.readers;
