@@ -49,7 +49,7 @@ let close_nonblock p =
 
 let close p =
   close_nonblock p;
-  Lwt.join p.keep
+  Lwt.return_unit
 
 let wait p = Lwt.map (fun _ -> ()) p.closed
 
