@@ -306,11 +306,35 @@ module Reader = struct
     | None -> Lwt.return_unit
     | Some x -> f x >>= fun () -> iter_s ~f t
 
+  (* util to find in lists *)
+  let find_map_l f l =
+    let rec aux f = function
+      | [] -> None
+      | x::l' ->
+        match f x with
+          | Some _ as res -> res
+          | None -> aux f l'
+    in aux f l
+
   let iter_p ~f t =
     let rec iter acc =
       read t >>= function
       | None -> Lwt.join acc
-      | Some x -> iter (f x :: acc)
+      | Some x ->
+        (* did any computation fail? *)
+        let maybe_err =
+          find_map_l
+            (fun t -> match Lwt.state t with
+               | Lwt.Fail e -> Some e | _ -> None)
+            acc
+        in
+        begin match maybe_err with
+          | None ->
+            (* continue, removing  from [acc] the already terminated functions *)
+            let acc = List.filter (fun t -> Lwt.state t <> Lwt.Sleep) acc in
+            iter (f x :: acc)
+          | Some e -> Lwt.fail e
+        end
     in iter []
 
   let merge_all l =
