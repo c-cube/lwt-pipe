@@ -120,9 +120,9 @@ module Reader : sig
 
   val filter_map_s : f:('a -> 'b option Lwt.t) -> ('a, [>`r]) pipe -> 'b t
 
-  val flat_map : f:('a -> 'b list) -> ('a, [>`r]) pipe -> 'b t 
+  val flat_map : f:('a -> 'b list) -> ('a, [>`r]) pipe -> 'b t
 
-  val flat_map_s : f:('a -> 'b list Lwt.t) -> ('a, [>`r]) pipe -> 'b t 
+  val flat_map_s : f:('a -> 'b list Lwt.t) -> ('a, [>`r]) pipe -> 'b t
 
   val fold : f:('acc -> 'a -> 'acc) -> x:'acc -> ('a, [>`r]) pipe -> 'acc Lwt.t
 
