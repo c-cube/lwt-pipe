@@ -4,7 +4,6 @@
 open Lwt.Infix
 
 let ret_end = Lwt.return None
-let ret_yield x = Lwt.return (Some x)
 
 exception Closed
 

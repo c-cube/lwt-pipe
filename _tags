@@ -1,3 +1,0 @@
-<src>: include
-<src/*>: package(lwt)
-true: safe_string, short_paths, warn(+a-4)
