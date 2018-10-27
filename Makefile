@@ -1,6 +1,6 @@
-.PHONY: all clean install
+.PHONY: build clean install
 
-all:
+build:
 	jbuilder build 
 
 clean:
