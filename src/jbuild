@@ -5,6 +5,4 @@
   (public_name     lwt-pipe)
   (wrapped     false)
   (libraries       (lwt lwt.unix))
-  (flags           (:standard -w +a-4 -safe-string))
-  (preprocess
-    (pps (lwt_ppx)))))
+  (flags           (:standard -w +a-4 -safe-string))))
