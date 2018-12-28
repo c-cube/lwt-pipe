@@ -38,6 +38,12 @@ type ('a, +'perm) t constraint 'perm = [< `r | `w]
 
 type ('a, 'perm) pipe = ('a, 'perm) t
 
+type availability =
+  | Pipe_closed
+  | Nothing_available
+  | Data_available
+(** Used as result of [values_available] *)
+
 val keep : (_,_) t -> unit Lwt.t -> unit
 (** [keep p fut] adds a pointer from [p] to [fut] so that [fut] is not
     garbage-collected before [p] *)
@@ -69,6 +75,9 @@ val connect : ?ownership:[`None | `InOwnsOut | `OutOwnsIn] ->
 val link_close : (_,_) t -> after:(_,_) t -> unit
 (** [link_close p ~after] will close [p] when [after] closes.
     if [after] is closed already, closes [p] immediately *)
+
+val values_available : ('a, [>`r]) t -> availability Lwt.t
+(** [values_available t] tests if data is available in the queue *)
 
 val read : ('a, [>`r]) t -> 'a option Lwt.t
 (** Read the next value from a Pipe *)

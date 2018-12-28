@@ -7,10 +7,14 @@ let ret_end = Lwt.return None
 
 exception Closed
 
+type how_many =
+  | Zero
+  | One
+
 type ('a, +'perm) t = {
   close : unit Lwt.u;
   closed : unit Lwt.t;
-  readers : 'a option Lwt.u Queue.t;  (* readers *)
+  readers : ('a option Lwt.u * how_many) Queue.t;  (* readers *)
   writers : 'a option Queue.t;
   blocked_writers : ('a option * unit Lwt.u) Queue.t; (* blocked writers *)
   max_size : int;
@@ -18,6 +22,11 @@ type ('a, +'perm) t = {
 } constraint 'perm = [< `r | `w]
 
 type ('a, 'perm) pipe = ('a, 'perm) t
+
+type availability =
+  | Pipe_closed
+  | Nothing_available
+  | Data_available
 
 let create ?on_close ?(max_size=0) () =
   let closed, close = Lwt.wait () in
@@ -42,7 +51,7 @@ let is_closed p = not (Lwt.is_sleeping p.closed)
 let close_nonblock p =
   if not (is_closed p) then (
     Lwt.wakeup p.close (); (* evaluate *)
-    Queue.iter (fun r -> Lwt.wakeup r None) p.readers;
+    Queue.iter (fun (r, _) -> Lwt.wakeup r None) p.readers;
     Queue.iter (fun (_,r) -> Lwt.wakeup r ()) p.blocked_writers;
   )
 
@@ -74,25 +83,46 @@ let try_read t =
     Some x
   )
 
+let map_to_availability = function
+  | Some _ -> Data_available
+  | None -> Nothing_available
+
+let values_available t =
+  if is_closed t then Lwt.return Pipe_closed
+  else begin
+    if Queue.is_empty t.writers then begin
+      if Queue.is_empty t.blocked_writers then begin
+        let fut, send = Lwt.wait () in
+        Queue.push (send, Zero) t.readers;
+        Lwt.map map_to_availability fut
+      end else begin
+        assert (t.max_size = 0);
+        let x, _ = Queue.peek t.blocked_writers in
+        map_to_availability x |> Lwt.return
+      end
+    end else Queue.peek t.writers |> map_to_availability |> Lwt.return
+  end
+
 (* read next one *)
 let read t =
   if is_closed t then ret_end  (* end of stream *)
   else match try_read t with
    | None ->
      let fut, send = Lwt.wait () in
-     Queue.push send t.readers;
+     Queue.push (send, One) t.readers;
      fut
    | Some x -> Lwt.return x
 
 (* write a value *)
-let write_step t x =
+let rec write_step t x =
   if is_closed t then Lwt.fail Closed
   else if Queue.length t.readers > 0
     then (
       (* some reader waits, synchronize now *)
-      let send = Queue.pop t.readers in
-      Lwt.wakeup send x;
-      Lwt.return_unit
+      let send, how_many = Queue.pop t.readers in
+      match how_many with
+      | One ->  (Lwt.wakeup send x; Lwt.return_unit)
+      | Zero -> (Lwt.wakeup send x; write_step t x)
     )
   else if Queue.length t.writers < t.max_size
     then (
