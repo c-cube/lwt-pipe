@@ -87,6 +87,15 @@ val of_stream : 'a Lwt_stream.t -> ('a, [>`r]) t
 (** [of_stream s] reads from [s].  The returned pipe will close when
     [s] closes. *)
 
+type availability =
+  | Pipe_closed
+  | Nothing_available
+  | Data_available
+(** Used as result of [values_available] *)
+
+val values_available : ('a, [>`r]) t -> availability Lwt.t
+(** Check whether some values are available for reading *)
+
 (** {2 Write-only Interface and Combinators} *)
 
 module Writer : sig

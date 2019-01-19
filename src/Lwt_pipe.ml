@@ -84,6 +84,19 @@ let read t =
      fut
    | Some x -> Lwt.return x
 
+type availability =
+  | Pipe_closed
+  | Nothing_available
+  | Data_available
+
+let values_available t =
+  let r =
+    if is_closed t then Pipe_closed
+    else if Queue.is_empty t.writers && Queue.is_empty t.blocked_writers then Nothing_available
+    else Data_available
+  in
+  Lwt.return r
+
 (* write a value *)
 let write_step t x =
   if is_closed t then Lwt.fail Closed
