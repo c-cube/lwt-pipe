@@ -1,8 +1,0 @@
-(jbuild_version 1)
-
-(library
- ((name            lwt_pipe)
-  (public_name     lwt-pipe)
-  (wrapped     false)
-  (libraries       (lwt lwt.unix))
-  (flags           (:standard -w +a-4 -safe-string))))
