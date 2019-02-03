@@ -38,6 +38,13 @@ type ('a, +'perm) t constraint 'perm = [< `r | `w]
 
 type ('a, 'perm) pipe = ('a, 'perm) t
 
+type 'a read_timeout_result =
+  | Pipe_closed
+  | Nothing_available
+  | Timeout
+  | Data_available of 'a
+(** Return type for the [read_with_timeout] function *)
+
 val keep : (_,_) t -> unit Lwt.t -> unit
 (** [keep p fut] adds a pointer from [p] to [fut] so that [fut] is not
     garbage-collected before [p] *)
@@ -71,6 +78,9 @@ val link_close : (_,_) t -> after:(_,_) t -> unit
     if [after] is closed already, closes [p] immediately *)
 
 val read : ('a, [>`r]) t -> 'a option Lwt.t
+(** Read the next value from a Pipe *)
+
+val read_with_timeout : ('a, [>`r]) t -> timeout:float -> 'a read_timeout_result Lwt.t
 (** Read the next value from a Pipe *)
 
 val write : ('a, [>`w]) t -> 'a -> unit Lwt.t
