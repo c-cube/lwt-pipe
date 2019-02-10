@@ -81,7 +81,9 @@ val read : ('a, [>`r]) t -> 'a option Lwt.t
 (** Read the next value from a Pipe *)
 
 val read_with_timeout : ('a, [>`r]) t -> timeout:[< `At_most of float | `Forever ] -> 'a read_timeout_result Lwt.t
-(** Read the next value from a Pipe *)
+(** [read_with_timeout p ~timeout] read the next value from a Pipe,
+    optionally waiting for at most a number of seconds passed with the
+    [timeout] parameter. *)
 
 val write : ('a, [>`w]) t -> 'a -> unit Lwt.t
 (** @raise Closed if the writer is closed *)

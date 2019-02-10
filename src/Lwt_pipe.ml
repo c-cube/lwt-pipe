@@ -3,8 +3,6 @@
 
 open Lwt.Infix
 
-let ret_end = Lwt.return None
-
 exception Closed
 
 type ('a, +'perm) t = {
@@ -58,38 +56,6 @@ let close p =
 
 let wait p = Lwt.map (fun _ -> ()) p.closed
 
-(* try to take next element from writers buffer *)
-let try_read t =
-  if Queue.is_empty t.writers
-  then if Queue.is_empty t.blocked_writers
-    then None
-    else (
-      assert (t.max_size = 0);
-      let x, signal_done = Queue.pop t.blocked_writers in
-      Lwt.wakeup signal_done ();
-      Some x
-    )
-  else (
-    let x = Queue.pop t.writers in
-    (* some writer may unblock *)
-    if not (Queue.is_empty t.blocked_writers) && Queue.length t.writers < t.max_size then (
-      let y, signal_done = Queue.pop t.blocked_writers in
-      Queue.push y t.writers;
-      Lwt.wakeup signal_done ();
-    );
-    Some x
-  )
-
-(* read next one *)
-let read t =
-  if is_closed t then ret_end  (* end of stream *)
-  else match try_read t with
-   | None ->
-     let fut, send = Lwt.wait () in
-     Queue.push (send, ref false) t.readers;
-     fut
-   | Some x -> Lwt.return x
-
 let avail_map x =
   match x with
   | Some x -> Data_available x
@@ -137,6 +103,13 @@ let read_with_timeout t ~timeout =
     );
     Lwt.return (avail_map x)
   )
+
+(* read next one *)
+let read t =
+  read_with_timeout t ~timeout:`Forever |>
+  Lwt.map (function
+    | Pipe_closed | Nothing_available | Timeout -> None
+    | Data_available x -> Some x)
 
 let enqueue_into_writers t x =
   if Queue.length t.writers < t.max_size
