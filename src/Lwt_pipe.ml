@@ -96,10 +96,15 @@ let avail_map x =
   | None -> Nothing_available
 
 let read_with_timeout t ~timeout =
+  let timeout_seconds =
+    match timeout with
+    | `Forever -> 0.0  (* Never used in this case. *)
+    | `At_most s -> s in
+
   let timeout_occurred = ref false in
 
-  let _timeout_function () =
-    Lwt_unix.sleep timeout >>= fun () ->
+  let timeout_function () =
+    Lwt_unix.sleep timeout_seconds >>= fun () ->
     timeout_occurred := true;
     Lwt.return Timeout in
 
@@ -112,7 +117,9 @@ let read_with_timeout t ~timeout =
       let wait_for_data () =
         fut >>= fun result ->
         Lwt.return (avail_map result) in
-      Lwt.pick [_timeout_function (); wait_for_data ()]
+      match timeout with
+      | `Forever -> wait_for_data ()
+      | `At_most _ -> Lwt.pick [timeout_function (); wait_for_data ()]
     )
     else (
       assert (t.max_size = 0);
