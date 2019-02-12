@@ -9,7 +9,7 @@ clean:
 install:
 	@dune install
 
-test:
+test: build
 	@dune runtest --force --no-buffer
 
 watch:
