@@ -7,10 +7,12 @@ synopsis: "An alternative to `Lwt_stream` with interfaces for producers and cons
 build: [
   ["dune" "build" "@install" "-p" name]
   ["dune" "build" "@doc" "-p" name] {with-doc}
+  ["dune" "runtest" "-p" name] {with-test}
 ]
 depends: [
   "dune" {build}
   "lwt"
+  "mdx" {with-test}
 ]
 tags: [ "lwt" "pipe" "stream" "blocking" ]
 homepage: "https://github.com/c-cube/lwt-pipe/"

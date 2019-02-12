@@ -1,4 +1,4 @@
-# Lwt Pipe
+# Lwt Pipe  [![Build Status](https://travis-ci.org/c-cube/lwt-pipe.svg?branch=master)](https://travis-ci.org/c-cube/lwt-pipe)
 
 An alternative to `Lwt_stream` with interfaces for producers and consumers
 and a bounded internal buffer.
@@ -21,12 +21,12 @@ or:
 # open Lwt.Infix;;
 
 # let l = [1;2;3;4];;
+val l : int list = [1; 2; 3; 4]
 
 # Lwt_pipe.of_list l
   |> Lwt_pipe.Reader.map ~f:(fun x->x+1)
   |> Lwt_pipe.to_list;;
-- : int list Lwt.t = [2; 3; 4; 5]
-
+- : int list = [2; 3; 4; 5]
 ```
 
 ## License
