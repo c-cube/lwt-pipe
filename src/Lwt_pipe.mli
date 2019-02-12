@@ -87,10 +87,16 @@ val read_with_timeout :
     optionally waiting for at most a number of seconds passed with the
     [timeout] parameter. *)
 
-val write : ('a, [>`w]) t -> 'a -> unit Lwt.t
+val write : ('a, [>`w]) t -> 'a -> bool Lwt.t
+(** Returns [false] if the pipe is closed *)
+
+val write_exn : ('a, [>`w]) t -> 'a -> unit Lwt.t
 (** @raise Closed if the writer is closed *)
 
-val write_list : ('a, [>`w]) t -> 'a list -> unit Lwt.t
+val write_list : ('a, [>`w]) t -> 'a list -> bool Lwt.t
+(** Returns [false] if the pipe is closed *)
+
+val write_list_exn : ('a, [>`w]) t -> 'a list -> unit Lwt.t
 (** @raise Closed if the writer is closed *)
 
 val to_stream : ('a, [>`r]) t -> 'a Lwt_stream.t
