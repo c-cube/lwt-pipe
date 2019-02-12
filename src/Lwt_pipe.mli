@@ -80,7 +80,9 @@ val link_close : (_,_) t -> after:(_,_) t -> unit
 val read : ('a, [>`r]) t -> 'a option Lwt.t
 (** Read the next value from a Pipe *)
 
-val read_with_timeout : ('a, [>`r]) t -> timeout:[< `At_most of float | `Forever ] -> 'a read_timeout_result Lwt.t
+val read_with_timeout :
+  ('a, [>`r]) t ->
+  timeout:float option -> 'a read_timeout_result Lwt.t
 (** [read_with_timeout p ~timeout] read the next value from a Pipe,
     optionally waiting for at most a number of seconds passed with the
     [timeout] parameter. *)
