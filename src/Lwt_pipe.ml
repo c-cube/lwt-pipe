@@ -3,19 +3,23 @@
 
 open Lwt.Infix
 
-let ret_end = Lwt.return None
-
 exception Closed
 
 type ('a, +'perm) t = {
   close : unit Lwt.u;
   closed : unit Lwt.t;
-  readers : 'a option Lwt.u Queue.t;  (* readers *)
+  readers : ('a option Lwt.u * bool ref) Queue.t;  (* readers *)
   writers : 'a option Queue.t;
   blocked_writers : ('a option * unit Lwt.u) Queue.t; (* blocked writers *)
   max_size : int;
   mutable keep : unit Lwt.t list;  (* do not GC, and wait for completion *)
 } constraint 'perm = [< `r | `w]
+
+type 'a read_timeout_result =
+  | Pipe_closed
+  | Nothing_available
+  | Timeout
+  | Data_available of 'a
 
 type ('a, 'perm) pipe = ('a, 'perm) t
 
@@ -42,7 +46,7 @@ let is_closed p = not (Lwt.is_sleeping p.closed)
 let close_nonblock p =
   if not (is_closed p) then (
     Lwt.wakeup p.close (); (* evaluate *)
-    Queue.iter (fun r -> Lwt.wakeup r None) p.readers;
+    Queue.iter (fun (r, _tout) -> Lwt.wakeup r None) p.readers;
     Queue.iter (fun (_,r) -> Lwt.wakeup r ()) p.blocked_writers;
   )
 
@@ -52,16 +56,42 @@ let close p =
 
 let wait p = Lwt.map (fun _ -> ()) p.closed
 
-(* try to take next element from writers buffer *)
-let try_read t =
-  if Queue.is_empty t.writers
+let avail_map x =
+  match x with
+  | Some x -> Data_available x
+  | None -> Nothing_available
+
+let read_with_timeout t ~timeout =
+  let timeout_seconds =
+    match timeout with
+    | `Forever -> 0.0  (* Never used in this case. *)
+    | `At_most s -> s in
+
+  let timeout_occurred = ref false in
+
+  let timeout_function () =
+    Lwt_unix.sleep timeout_seconds >>= fun () ->
+    timeout_occurred := true;
+    Lwt.return Timeout in
+
+  if is_closed t then Lwt.return Pipe_closed
+  else if Queue.is_empty t.writers
   then if Queue.is_empty t.blocked_writers
-    then None
+    then (
+      let fut, send = Lwt.wait () in
+      Queue.push (send, timeout_occurred) t.readers;
+      let wait_for_data () =
+        fut >>= fun result ->
+        Lwt.return (avail_map result) in
+      match timeout with
+      | `Forever -> wait_for_data ()
+      | `At_most _ -> Lwt.pick [timeout_function (); wait_for_data ()]
+    )
     else (
       assert (t.max_size = 0);
       let x, signal_done = Queue.pop t.blocked_writers in
       Lwt.wakeup signal_done ();
-      Some x
+      Lwt.return (avail_map x)
     )
   else (
     let x = Queue.pop t.writers in
@@ -71,40 +101,46 @@ let try_read t =
       Queue.push y t.writers;
       Lwt.wakeup signal_done ();
     );
-    Some x
+    Lwt.return (avail_map x)
   )
 
 (* read next one *)
 let read t =
-  if is_closed t then ret_end  (* end of stream *)
-  else match try_read t with
-   | None ->
-     let fut, send = Lwt.wait () in
-     Queue.push send t.readers;
-     fut
-   | Some x -> Lwt.return x
+  read_with_timeout t ~timeout:`Forever |>
+  Lwt.map (function
+    | Pipe_closed | Nothing_available | Timeout -> None
+    | Data_available x -> Some x)
 
-(* write a value *)
-let write_step t x =
-  if is_closed t then Lwt.fail Closed
-  else if Queue.length t.readers > 0
-    then (
-      (* some reader waits, synchronize now *)
-      let send = Queue.pop t.readers in
-      Lwt.wakeup send x;
-      Lwt.return_unit
-    )
-  else if Queue.length t.writers < t.max_size
-    then (
-      Queue.push x t.writers;
-      Lwt.return_unit  (* into buffer, do not wait *)
-    )
+let enqueue_into_writers t x =
+  if Queue.length t.writers < t.max_size
+  then (
+    Queue.push x t.writers;
+    Lwt.return_unit  (* into buffer, do not wait *)
+  )
   else (
     (* block until the queue isn't full anymore *)
     let is_done, signal_done = Lwt.wait () in
     Queue.push (x, signal_done) t.blocked_writers;
     is_done (* block *)
   )
+
+(* write a value *)
+let rec write_step t x =
+  if is_closed t then Lwt.fail Closed
+  else if Queue.length t.readers > 0
+    then (
+      (* some reader waits, synchronize now *)
+      let send, tout = Queue.pop t.readers in
+      if !tout then write_step t x
+      (* if timeout occurred the corresponding reader has already received
+       * a Timeout value and shoud be discarded. The value [x] is processed
+       * again by [write_step] *)
+      else begin  (* timeout = false *)
+        Lwt.wakeup send x;
+        Lwt.return_unit
+      end
+    )
+  else enqueue_into_writers t x
 
 let rec connect_rec r w =
   read r >>= function
