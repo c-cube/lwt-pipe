@@ -8,3 +8,6 @@ clean:
 
 install:
 	@dune install
+
+watch:
+	@dune build @all -w
