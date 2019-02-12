@@ -20,8 +20,8 @@ type ('a, +'perm) t = {
   close : unit Lwt.u;
   closed : unit Lwt.t;
   readers : 'a reader Queue.t;  (* readers *)
-  writers : 'a read_timeout_result Queue.t;
-  blocked_writers : ('a read_timeout_result * unit Lwt.u) Queue.t; (* blocked writers *)
+  writers : 'a Queue.t;
+  blocked_writers : ('a * unit Lwt.u) Queue.t; (* blocked writers *)
   max_size : int;
   mutable keep : unit Lwt.t list;  (* do not GC, and wait for completion *)
 } constraint 'perm = [< `r | `w]
@@ -85,7 +85,7 @@ let read_ t ~timeout : 'a read_timeout_result Lwt.t =
       assert (t.max_size = 0);
       let x, signal_done = Queue.pop t.blocked_writers in
       Lwt.wakeup signal_done ();
-      Lwt.return x
+      Lwt.return (Data_available x)
     )
   ) else (
     let x = Queue.pop t.writers in
@@ -95,7 +95,7 @@ let read_ t ~timeout : 'a read_timeout_result Lwt.t =
       Queue.push y t.writers;
       Lwt.wakeup signal_done ();
     );
-    Lwt.return x
+    Lwt.return (Data_available x)
   )
 
 let read_with_timeout t ~timeout =
@@ -117,7 +117,7 @@ let enqueue_into_writers t x =
   )
 
 (* write a value *)
-let rec write_step (t:_ pipe) (x:_ read_timeout_result) =
+let rec write_step (t:('a,_) pipe) (x:'a) =
   if is_closed t then (
     Lwt.fail Closed
   ) else if Queue.length t.readers > 0 then (
@@ -130,7 +130,7 @@ let rec write_step (t:_ pipe) (x:_ read_timeout_result) =
       write_step t x
     ) else (
       (* timeout = false *)
-      Lwt.wakeup r.r_wakeup x;
+      Lwt.wakeup r.r_wakeup (Data_available x);
       Lwt.return_unit
     )
   ) else (
@@ -139,8 +139,8 @@ let rec write_step (t:_ pipe) (x:_ read_timeout_result) =
 
 let rec connect_rec r w =
   read_with_timeout ~timeout:None r >>= function
-  | Data_available _ as step ->
-    write_step w step >>= fun () ->
+  | Data_available x ->
+    write_step w x >>= fun () ->
     connect_rec r w
   | _ -> Lwt.return_unit
 
@@ -167,7 +167,7 @@ let link_close_l p ~after =
          if !n = 0 then close_nonblock p))
     after
 
-let write t x = write_step t (Data_available x)
+let write t x = write_step t x
 
 let rec write_list t l = match l with
   | [] -> Lwt.return_unit
