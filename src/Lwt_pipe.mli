@@ -115,12 +115,12 @@ module Writer : sig
   val map : f:('a -> 'b) -> ('b, [>`w]) pipe -> 'a t
   (** Map values before writing them *)
 
-  val send_both : 'a t -> 'a t -> 'a t
+  val send_both : ('a, [>`w] as 'kind) pipe -> ('a, [>`w] as 'kind) pipe -> 'a t
   (** [send_both a b] returns a writer [c] such that writing to [c]
       writes to [a] and [b], and waits for those writes to succeed
       before returning *)
 
-  val send_all : 'a t list -> 'a t
+  val send_all : ('a, [>`w]) pipe list -> 'a t
   (** Generalized version of {!send_both}
       @raise Invalid_argument if the list is empty *)
 end
@@ -148,20 +148,20 @@ module Reader : sig
 
   val fold_s : f:('acc -> 'a -> 'acc Lwt.t) -> x:'acc -> ('a, [>`r]) pipe -> 'acc Lwt.t
 
-  val iter : f:('a -> unit) -> 'a t -> unit Lwt.t
+  val iter : f:('a -> unit) -> ('a, [>`r]) pipe -> unit Lwt.t
 
-  val iter_s : f:('a -> unit Lwt.t) -> 'a t -> unit Lwt.t
+  val iter_s : f:('a -> unit Lwt.t) -> ('a, [>`r]) pipe -> unit Lwt.t
 
-  val iter_p : f:('a -> unit Lwt.t) -> 'a t -> unit Lwt.t
+  val iter_p : f:('a -> unit Lwt.t) -> ('a, [>`r]) pipe -> unit Lwt.t
 
-  val merge_both : 'a t -> 'a t -> 'a t
+  val merge_both : ('a, [>`r] as 'kind) pipe -> ('a, [>`r] as 'kind) pipe -> 'a t
   (** Merge the two input streams in a non-specified order *)
 
-  val merge_all : 'a t list -> 'a t
+  val merge_all : ('a, [>`r]) pipe list -> 'a t
   (** Merge all the input streams
       @raise Invalid_argument if the list is empty *)
 
-  val append : 'a t -> 'a t -> 'a t
+  val append : ('a, [>`r]) pipe -> ('a, [>`r]) pipe -> 'a t
   (** [append a b] reads from [a] until [a] closes, then reads from [b]
       and closes when [b] closes *)
 end
