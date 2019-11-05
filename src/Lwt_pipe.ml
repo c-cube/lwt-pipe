@@ -459,7 +459,9 @@ let of_string a =
       if ok then send (i+1) else Lwt.return_unit
     ) else Lwt.return_unit
   in
-  keep p (send 0);
+  let fut = send 0 in
+  keep p fut;
+  Lwt.on_termination fut (fun () -> close_nonblock p);
   p
 
 let of_lwt_klist l =
