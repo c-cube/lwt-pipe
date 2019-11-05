@@ -441,11 +441,10 @@ let of_list l : _ Reader.t =
 let of_array a =
   let p = create ~max_size:0 () in
   let rec send i =
-    if i = Array.length a then close p
-    else (
+    if i < Array.length a then (
       write p a.(i) >>= fun ok ->
       if ok then send (i+1) else Lwt.return_unit
-    )
+    ) else Lwt.return_unit
   in
   let fut = send 0 in
   keep p fut;
