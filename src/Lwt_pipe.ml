@@ -78,6 +78,22 @@ let close p =
     p.closed
   )
 
+(*$T is_closed; create
+  create () |> is_closed |> not
+*)
+
+(*$T close; is_closed; create
+  let p = create () in \
+  Lwt_main.run (close p); \
+  is_closed p
+*)
+
+(*$T close_nonblock; is_closed; create
+  let p = create () in \
+  close_nonblock p; \
+  is_closed p
+*)
+
 let opt_of_available = function
   | Data_available x -> Some x
   | _ -> None
@@ -117,6 +133,21 @@ let read_ t ~timeout : 'a read_timeout_result Lwt.t =
 
 let read_with_timeout t ~timeout =
   read_ t ~timeout
+
+(*$= read_with_timeout
+  (read_with_timeout ~timeout:(Some 0.001) (create ()) |> Lwt_main.run)  (Timeout)
+  (read_with_timeout ~timeout:(Some 0.001) (of_list [1]) |> Lwt_main.run) (Data_available 1)
+  (read_with_timeout ~timeout:(Some 0.001) (of_list []) |> Lwt_main.run) (Pipe_closed)
+*)
+
+(*$Q read_with_timeout
+  Q.(list int) (fun l -> \
+    let result = match l with \
+      | [] -> Pipe_closed \
+      | h::_ -> Data_available h \
+    in \
+    of_list l |> read_with_timeout ~timeout:(Some 0.001) |> Lwt_main.run = result)
+*)
 
 let read t =
   read_ t ~timeout:None >|= opt_of_available
@@ -244,7 +275,7 @@ module Reader = struct
     let rec fwd_rec () =
       read a >>= function
       | Some x ->
-        write b (f x) >>= fun ok -> 
+        write b (f x) >>= fun ok ->
         if ok then fwd_rec () else Lwt.return_unit
       | None -> Lwt.return_unit
     in
@@ -451,6 +482,12 @@ let of_array a =
   Lwt.on_termination fut (fun () -> close_nonblock p);
   p
 
+(*$Q of_array; to_list
+  Q.(array int) (fun a -> \
+    let pipe = of_array a in \
+    Lwt_main.run (to_list pipe) = Array.to_list a)
+*)
+
 let of_string a =
   let p = create ~max_size:0 () in
   let rec send i =
@@ -481,7 +518,23 @@ let of_lwt_klist l =
 let to_list_rev r =
   Reader.fold ~f:(fun acc x -> x :: acc) ~x:[] r
 
+(*$Q of_list; to_list_rev
+  Q.(list int) (fun l -> \
+    let pipe = of_list l in \
+    Lwt_main.run (to_list_rev pipe) = List.rev l)
+*)
+
 let to_list r = to_list_rev r >|= List.rev
+
+(*$= to_list; of_list & ~printer:(fun l -> List.map string_of_int l |> String.concat " ")
+  (of_list [1;2;3] |> to_list |> Lwt_main.run) ([1;2;3])
+*)
+
+(*$Q of_list; to_list
+  Q.(list int) (fun l -> \
+    let pipe = of_list l in \
+    Lwt_main.run (to_list pipe) = l)
+*)
 
 let to_buffer buf r =
   Reader.iter ~f:(fun c -> Buffer.add_char buf c) r
@@ -497,9 +550,24 @@ let to_string r =
   let buf = Buffer.create 128 in
   to_buffer buf r >>= fun () -> Lwt.return (Buffer.contents buf)
 
+(*$Q of_string; to_string
+  Q.(string) (fun s -> \
+    let pipe = of_string s in \
+    Lwt_main.run (to_string pipe) = s)
+*)
+
 let join_strings ?sep r =
   let buf = Buffer.create 128 in
   to_buffer_str ?sep buf r >>= fun () -> Lwt.return (Buffer.contents buf)
+
+(*$Q join_strings
+  Q.(list string) (fun l -> \
+    let pipe = of_list l in \
+    Lwt_main.run (join_strings pipe) = String.concat "" l)
+  Q.(list string) (fun l -> \
+    let pipe = of_list l in \
+    Lwt_main.run (join_strings ~sep:" " pipe) = String.concat " " l)
+*)
 
 let to_lwt_klist r =
   let rec next () =

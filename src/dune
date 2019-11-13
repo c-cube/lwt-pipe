@@ -4,4 +4,5 @@
  (public_name lwt-pipe)
  (wrapped false)
  (libraries lwt lwt.unix)
+ (inline_tests (backend qtest.lib))
  (flags :standard -w +a-4 -safe-string))

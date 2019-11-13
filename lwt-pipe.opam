@@ -13,6 +13,8 @@ depends: [
   "dune" {build}
   "lwt"
   "mdx" {with-test}
+  "qcheck" {with-test}
+  "qtest" {with-test}
 ]
 tags: [ "lwt" "pipe" "stream" "blocking" ]
 homepage: "https://github.com/c-cube/lwt-pipe/"

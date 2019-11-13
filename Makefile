@@ -1,4 +1,6 @@
-.PHONY: build clean install
+.PHONY: all build clean install
+
+all: build test
 
 build:
 	@dune build @install
