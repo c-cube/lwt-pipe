@@ -228,7 +228,7 @@ let to_stream p =
 
 let of_stream s =
   let p = create () in
-  let fut = Lwt_stream.iter_s (write_exn p) s >>= fun () -> close p in
+  let fut = Lwt_stream.iter_s (write_exn p) s in
   keep p fut;
   Lwt.on_termination fut (fun () -> close_nonblock p);
   p
