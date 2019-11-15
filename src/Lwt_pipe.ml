@@ -464,7 +464,12 @@ type 'a lwt_klist = [ `Nil | `Cons of 'a * 'a lwt_klist ] Lwt.t
 
 let of_list l : _ Reader.t =
   let p = create ~max_size:0 () in
-  let fut = Lwt_list.iter_s (write_exn p) l in
+  let rec send = function
+    | [] -> Lwt.return_unit
+    | h::t -> write p h >>= fun ok ->
+      if ok then send t else Lwt.return_unit
+  in
+  let fut = send l in
   keep p fut;
   Lwt.on_termination fut (fun () -> close_nonblock p);
   p
