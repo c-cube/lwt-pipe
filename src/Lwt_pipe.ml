@@ -228,7 +228,13 @@ let to_stream p =
 
 let of_stream s =
   let p = create () in
-  let fut = Lwt_stream.iter_s (write_exn p) s in
+  let rec send s = Lwt_stream.get s >>= fun result ->
+    match result with
+    | None -> Lwt.return_unit
+    | Some elt -> write p elt >>= fun ok ->
+      if ok then send s else Lwt.return_unit
+  in
+  let fut = send s in
   keep p fut;
   Lwt.on_termination fut (fun () -> close_nonblock p);
   p
