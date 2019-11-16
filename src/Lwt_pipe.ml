@@ -204,6 +204,14 @@ let connect ?(ownership=`None) a b =
   | `InOwnsOut -> Lwt.on_termination fut (fun () -> close_nonblock b)
   | `OutOwnsIn -> Lwt.on_termination fut (fun () -> close_nonblock a)
 
+(*$Q connect
+  Q.(list int) (fun l -> \
+    let p1 = of_list l in \
+    let p2 = create () in \
+    connect ~ownership:`InOwnsOut p1 p2; \
+    Lwt_main.run (to_list p2) = l)
+*)
+
 let write_exn t x =
   write_rec_ t x >>= fun ok ->
   if ok then Lwt.return_unit
