@@ -204,6 +204,14 @@ let connect ?(ownership=`None) a b =
   | `InOwnsOut -> Lwt.on_termination fut (fun () -> close_nonblock b)
   | `OutOwnsIn -> Lwt.on_termination fut (fun () -> close_nonblock a)
 
+(*$Q connect
+  Q.(list int) (fun l -> \
+    let p1 = of_list l in \
+    let p2 = create () in \
+    connect ~ownership:`InOwnsOut p1 p2; \
+    Lwt_main.run (to_list p2) = l)
+*)
+
 let write_exn t x =
   write_rec_ t x >>= fun ok ->
   if ok then Lwt.return_unit
@@ -228,7 +236,13 @@ let to_stream p =
 
 let of_stream s =
   let p = create () in
-  let fut = Lwt_stream.iter_s (write_exn p) s >>= fun () -> close p in
+  let rec send s = Lwt_stream.get s >>= fun result ->
+    match result with
+    | None -> Lwt.return_unit
+    | Some elt -> write p elt >>= fun ok ->
+      if ok then send s else Lwt.return_unit
+  in
+  let fut = send s in
   keep p fut;
   Lwt.on_termination fut (fun () -> close_nonblock p);
   p
@@ -464,7 +478,12 @@ type 'a lwt_klist = [ `Nil | `Cons of 'a * 'a lwt_klist ] Lwt.t
 
 let of_list l : _ Reader.t =
   let p = create ~max_size:0 () in
-  let fut = Lwt_list.iter_s (write_exn p) l in
+  let rec send = function
+    | [] -> Lwt.return_unit
+    | h::t -> write p h >>= fun ok ->
+      if ok then send t else Lwt.return_unit
+  in
+  let fut = send l in
   keep p fut;
   Lwt.on_termination fut (fun () -> close_nonblock p);
   p
