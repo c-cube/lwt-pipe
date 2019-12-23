@@ -15,6 +15,7 @@ depends: [
   "mdx" {with-test}
   "qcheck" {with-test}
   "qtest" {with-test}
+  "odoc" {with-doc}
 ]
 tags: [ "lwt" "pipe" "stream" "blocking" ]
 homepage: "https://github.com/c-cube/lwt-pipe/"
