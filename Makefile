@@ -14,5 +14,8 @@ install:
 test: build
 	@dune runtest --force --no-buffer
 
+doc:
+	dune build @doc
+
 watch:
 	@dune build @all -w
