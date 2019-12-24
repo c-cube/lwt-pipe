@@ -13,3 +13,5 @@ env:
   - PACKAGE="lwt-pipe" OCAML_VERSION="4.05"
   - PACKAGE="lwt-pipe" OCAML_VERSION="4.06"
   - PACKAGE="lwt-pipe" OCAML_VERSION="4.07"
+  - PACKAGE="lwt-pipe" OCAML_VERSION="4.08"
+  - PACKAGE="lwt-pipe" OCAML_VERSION="4.09"
