@@ -57,7 +57,7 @@ val push_ints : (int, [< `r | `w > `w ]) Lwt_pipe.t -> int -> unit Lwt.t =
     Lwt_pipe.close p >>= fun () ->
     t_read
   in
-  List.sort Pervasives.compare @@ Lwt_main.run reader
+  List.sort compare @@ Lwt_main.run reader
   ;;
 - : int list = [1; 1; 2; 2; 3; 3; 4; 4; 5; 5]
 ```
@@ -80,7 +80,7 @@ val int_range : int -> int Lwt_pipe.Reader.t = <fun>
     and p3 = int_range 6 in
     Lwt_pipe.to_list (Lwt_pipe.Reader.merge_all [p1;p2;p3])
   in
-  List.sort Pervasives.compare @@ Lwt_main.run reader
+  List.sort compare @@ Lwt_main.run reader
   ;;
 - : int list = [1; 1; 1; 2; 2; 2; 3; 3; 3; 4; 4; 4; 5; 5; 5; 6; 6; 6]
 ```
