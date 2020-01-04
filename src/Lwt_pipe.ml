@@ -397,7 +397,9 @@ module Reader = struct
     Q.(pair (fun1 Observable.string (option int)) (list string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.filter_map ~f:(Q.Fn.apply f) pipe)) = \
-      List.filter_map (Q.Fn.apply f) l)
+      (List.map (Q.Fn.apply f) l \
+      |> List.filter (fun x -> x != None) \
+      |> List.map (fun x -> match x with Some x -> x | None -> failwith "Impossible")))
   *)
 
   let filter_map_s ~f a =
