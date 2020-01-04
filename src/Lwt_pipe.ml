@@ -219,6 +219,31 @@ let write_exn t x =
 
 let write = write_rec_
 
+(*$QR read; write
+  Q.(int) (fun i ->
+    let p = create () in
+    let w = write p i in
+    let r = read p in
+    Lwt.bind w (fun b ->
+      Lwt.bind r (fun r ->
+        match r with
+          | None -> Lwt.return false
+          | Some r -> Lwt.return (b && r = i)))
+    |> Lwt_main.run)
+*)
+(*$QR read; write
+  Q.(list int) (fun l ->
+    let p = create () in
+    let w = write p l in
+    let r = read p in
+    Lwt.bind w (fun b ->
+      Lwt.bind r (fun r ->
+        match r with
+          | None -> Lwt.return false
+          | Some r -> Lwt.return (b && r = l)))
+    |> Lwt_main.run)
+*)
+
 let rec write_list t l = match l with
   | [] -> Lwt.return true
   | x :: tail ->
@@ -298,6 +323,13 @@ module Reader = struct
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
 
+  (*$Q
+    Q.(pair (fun1 Observable.string int) (list string)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.map ~f:(Q.Fn.apply f) pipe)) = \
+      List.map (Q.Fn.apply f) l)
+  *)
+
   let map_s ~f a =
     let b = create () in
     let rec fwd_rec () =
@@ -312,6 +344,13 @@ module Reader = struct
     keep b fwd;
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
+
+  (*$Q
+    Q.(pair (fun1 Observable.string int) (list string)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
+      List.map (Q.Fn.apply f) l)
+  *)
 
   let filter ~f a =
     let b = create () in
@@ -328,6 +367,13 @@ module Reader = struct
     keep b fwd;
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
+
+  (*$Q
+    Q.(pair (fun1 Observable.int bool) (list int)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.filter ~f:(Q.Fn.apply f) pipe)) = \
+      List.filter (Q.Fn.apply f) l)
+  *)
 
   let filter_map ~f a =
     let b = create () in
@@ -347,6 +393,13 @@ module Reader = struct
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
 
+  (*$Q
+    Q.(pair (fun1 Observable.string (option int)) (list string)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.filter_map ~f:(Q.Fn.apply f) pipe)) = \
+      List.filter_map (Q.Fn.apply f) l)
+  *)
+
   let filter_map_s ~f a =
     let b = create () in
     let rec fwd_rec () =
@@ -365,6 +418,13 @@ module Reader = struct
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
 
+  (*$Q
+    Q.(pair (fun1 Observable.string (option int)) (list string)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.filter_map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
+      List.filter_map (Q.Fn.apply f) l)
+  *)
+
   let flat_map ~f a =
     let b = create () in
     let rec fwd_rec () =
@@ -379,6 +439,13 @@ module Reader = struct
     keep b fwd;
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
+
+  (*$Q
+    Q.(pair (fun1 Observable.string (list int)) (list string)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.flat_map ~f:(Q.Fn.apply f) pipe)) = \
+      List.flatten (List.map (Q.Fn.apply f) l))
+  *)
 
   let flat_map_s ~f a =
     let b = create () in
@@ -395,17 +462,38 @@ module Reader = struct
     Lwt.on_termination fwd (fun () -> close_nonblock b);
     b
 
+  (*$Q
+    Q.(pair (fun1 Observable.string (list int)) (list string)) (fun (f,l) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (to_list (Reader.flat_map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
+      List.flatten (List.map (Q.Fn.apply f) l))
+  *)
+
   let rec fold ~f ~x t =
     read t
     >>= function
     | None -> Lwt.return x
     | Some y -> fold ~f ~x:(f x y) t
 
+  (*$Q
+    Q.(triple (fun2 Observable.int Observable.string int) (list string) int) (fun (f,l,x) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (Reader.fold ~f:(Q.Fn.apply f) ~x pipe) = \
+      List.fold_left (Q.Fn.apply f) x l)
+  *)
+
   let rec fold_s ~f ~x t =
     read t >>= function
     | None -> Lwt.return x
     | Some y ->
       f x y >>= fun x -> fold_s ~f ~x t
+
+  (*$Q
+    Q.(triple (fun2 Observable.int Observable.string int) (list string) int) (fun (f,l,x) -> \
+      let pipe = of_list l in \
+      Lwt_main.run (Reader.fold_s ~f:(fun x e -> Lwt.return (Q.Fn.apply f x e)) ~x pipe) = \
+      List.fold_left (Q.Fn.apply f) x l)
+  *)
 
   let rec iter ~f t =
     read t >>= function
