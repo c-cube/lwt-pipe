@@ -3,6 +3,8 @@
 An alternative to `Lwt_stream` with interfaces for producers and consumers
 and a bounded internal buffer.
 
+[Online Documentation](https://c-cube.github.io/lwt-pipe/)
+
 ## Build
 
 ```
