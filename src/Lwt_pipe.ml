@@ -445,7 +445,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string (list int)) (list string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string (list int)) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.flat_map ~f:(Q.Fn.apply f) pipe)) = \
       List.flatten (List.map (Q.Fn.apply f) l))
@@ -467,7 +467,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string (list int)) (list string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string (list int)) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.flat_map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
       List.flatten (List.map (Q.Fn.apply f) l))
