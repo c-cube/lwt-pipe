@@ -141,7 +141,7 @@ let read_with_timeout t ~timeout =
 *)
 
 (*$Q read_with_timeout
-  Q.(list int) (fun l -> \
+  Q.(small_list int) (fun l -> \
     let result = match l with \
       | [] -> Pipe_closed \
       | h::_ -> Data_available h \
@@ -205,7 +205,7 @@ let connect ?(ownership=`None) a b =
   | `OutOwnsIn -> Lwt.on_termination fut (fun () -> close_nonblock a)
 
 (*$Q connect
-  Q.(list int) (fun l -> \
+  Q.(small_list int) (fun l -> \
     let p1 = of_list l in \
     let p2 = create () in \
     connect ~ownership:`InOwnsOut p1 p2; \
@@ -232,7 +232,7 @@ let write = write_rec_
     |> Lwt_main.run)
 *)
 (*$QR read; write
-  Q.(list int) (fun l ->
+  Q.(small_list int) (fun l ->
     let p = create () in
     let w = write p l in
     let r = read p in
@@ -324,7 +324,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string int) (list string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string int) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.map ~f:(Q.Fn.apply f) pipe)) = \
       List.map (Q.Fn.apply f) l)
@@ -346,7 +346,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string int) (list string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string int) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
       List.map (Q.Fn.apply f) l)
@@ -369,7 +369,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.int bool) (list int)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.int bool) (small_list int)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.filter ~f:(Q.Fn.apply f) pipe)) = \
       List.filter (Q.Fn.apply f) l)
@@ -394,7 +394,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string (option int)) (list string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string (option int)) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.filter_map ~f:(Q.Fn.apply f) pipe)) = \
       (List.map (Q.Fn.apply f) l \
@@ -421,7 +421,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string (option int)) (list string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string (option int)) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.filter_map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
       (List.map (Q.Fn.apply f) l \
@@ -445,7 +445,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string (list int)) (small_list small_string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string (small_list int)) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.flat_map ~f:(Q.Fn.apply f) pipe)) = \
       List.flatten (List.map (Q.Fn.apply f) l))
@@ -467,7 +467,7 @@ module Reader = struct
     b
 
   (*$Q
-    Q.(pair (fun1 Observable.string (list int)) (small_list small_string)) (fun (f,l) -> \
+    Q.(pair (fun1 Observable.string (small_list int)) (small_list small_string)) (fun (f,l) -> \
       let pipe = of_list l in \
       Lwt_main.run (to_list (Reader.flat_map_s ~f:(fun e -> Lwt.return (Q.Fn.apply f e)) pipe)) = \
       List.flatten (List.map (Q.Fn.apply f) l))
@@ -480,7 +480,7 @@ module Reader = struct
     | Some y -> fold ~f ~x:(f x y) t
 
   (*$Q
-    Q.(triple (fun2 Observable.int Observable.string int) (list string) int) (fun (f,l,x) -> \
+    Q.(triple (fun2 Observable.int Observable.string int) (small_list small_string) int) (fun (f,l,x) -> \
       let pipe = of_list l in \
       Lwt_main.run (Reader.fold ~f:(Q.Fn.apply f) ~x pipe) = \
       List.fold_left (Q.Fn.apply f) x l)
@@ -493,7 +493,7 @@ module Reader = struct
       f x y >>= fun x -> fold_s ~f ~x t
 
   (*$Q
-    Q.(triple (fun2 Observable.int Observable.string int) (list string) int) (fun (f,l,x) -> \
+    Q.(triple (fun2 Observable.int Observable.string int) (small_list small_string) int) (fun (f,l,x) -> \
       let pipe = of_list l in \
       Lwt_main.run (Reader.fold_s ~f:(fun x e -> Lwt.return (Q.Fn.apply f x e)) ~x pipe) = \
       List.fold_left (Q.Fn.apply f) x l)
@@ -630,7 +630,7 @@ let to_list_rev r =
   Reader.fold ~f:(fun acc x -> x :: acc) ~x:[] r
 
 (*$Q of_list; to_list_rev
-  Q.(list int) (fun l -> \
+  Q.(small_list int) (fun l -> \
     let pipe = of_list l in \
     Lwt_main.run (to_list_rev pipe) = List.rev l)
 *)
@@ -642,7 +642,7 @@ let to_list r = to_list_rev r >|= List.rev
 *)
 
 (*$Q of_list; to_list
-  Q.(list int) (fun l -> \
+  Q.(small_list int) (fun l -> \
     let pipe = of_list l in \
     Lwt_main.run (to_list pipe) = l)
 *)
@@ -662,7 +662,7 @@ let to_string r =
   to_buffer buf r >>= fun () -> Lwt.return (Buffer.contents buf)
 
 (*$Q of_string; to_string
-  Q.(string) (fun s -> \
+  Q.(small_string) (fun s -> \
     let pipe = of_string s in \
     Lwt_main.run (to_string pipe) = s)
 *)
@@ -672,7 +672,7 @@ let join_strings ?sep r =
   to_buffer_str ?sep buf r >>= fun () -> Lwt.return (Buffer.contents buf)
 
 (*$Q join_strings
-  Q.(list string) (fun l -> \
+  Q.(small_list small_string) (fun l -> \
     let pipe = of_list l in \
     Lwt_main.run (join_strings pipe) = String.concat "" l)
   Q.(list string) (fun l -> \
