@@ -1,0 +1,4 @@
+(library
+  (name lwt_pipe_unix)
+  (public_name lwt-pipe.unix)
+  (libraries lwt-pipe lwt.unix))
