@@ -27,9 +27,12 @@ A pipe can be used as a regular iterator:
 
 ```ocaml
 # #require "lwt";;
-# #require "lwt-pipe";;
+# #require "lwt-pipe.unix";;
 
 # open Lwt.Infix;;
+
+# module Lwt_pipe = Lwt_pipe_unix;;
+module Lwt_pipe = Lwt_pipe_unix
 
 # let l = [1;2;3;4];;
 val l : int list = [1; 2; 3; 4]

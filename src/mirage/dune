@@ -1,0 +1,4 @@
+(library
+  (name lwt_pipe_mirage)
+  (public_name lwt-pipe-mirage)
+  (libraries mirage-channel duration mirage-time lwt-pipe))
