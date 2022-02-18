@@ -1,4 +1,4 @@
-# Lwt Pipe  [![Build Status](https://travis-ci.org/c-cube/lwt-pipe.svg?branch=master)](https://travis-ci.org/c-cube/lwt-pipe)
+# Lwt Pipe [![build](https://github.com/c-cube/lwt-pipe/actions/workflows/main.yml/badge.svg)](https://github.com/c-cube/lwt-pipe/actions/workflows/main.yml)
 
 An alternative to `Lwt_stream` with interfaces for producers and consumers
 and a bounded internal buffer.
