@@ -1,8 +1,8 @@
 
-(alias
- (name runtest)
+(rule
+ (alias runtest)
  (deps (:readme README.md))
  (action (progn
-          (run mdx test %{readme})
+          (run ocaml-mdx test %{readme})
           (diff? %{readme} %{readme}.corrected))))
 
