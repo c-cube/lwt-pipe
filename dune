@@ -1,8 +1,8 @@
 
 (alias
  (name runtest)
- (deps README.md)
+ (deps (:readme README.md))
  (action (progn
-          (run mdx test %{deps})
-          (diff? %{deps} %{deps}.corrected))))
+          (run mdx test %{readme})
+          (diff? %{readme} %{readme}.corrected))))
 
