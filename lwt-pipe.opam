@@ -10,7 +10,7 @@ build: [
   ["dune" "runtest" "-p" name "-j" jobs] {with-test}
 ]
 depends: [
-  "dune" {>= "1.1"}
+  "dune" {>= "2.0"}
   "lwt"
   "ocaml" { >= "4.03.0" }
   "mdx" {with-test}
